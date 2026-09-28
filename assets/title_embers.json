@@ -1,0 +1,27 @@
+{
+ "frames": {
+  "ember_big_0": [0, 0, 8, 8, 4, 4],
+  "ember_big_1": [8, 0, 8, 8, 4, 4],
+  "ember_big_2": [16, 0, 8, 8, 4, 4],
+  "ember_big_3": [24, 0, 8, 8, 4, 4],
+  "ember_mid_0": [0, 8, 8, 8, 4, 4],
+  "ember_mid_1": [8, 8, 8, 8, 4, 4],
+  "ember_mid_2": [16, 8, 8, 8, 4, 4],
+  "ember_mid_3": [24, 8, 8, 8, 4, 4],
+  "ember_small_0": [0, 16, 8, 8, 4, 4],
+  "ember_small_1": [8, 16, 8, 8, 4, 4],
+  "ember_small_2": [16, 16, 8, 8, 4, 4],
+  "ember_small_3": [24, 16, 8, 8, 4, 4],
+  "spark_0": [0, 24, 8, 8, 4, 4],
+  "spark_1": [8, 24, 8, 8, 4, 4],
+  "spark_2": [16, 24, 8, 8, 4, 4],
+  "spark_3": [24, 24, 8, 8, 4, 4]
+ },
+ "anims": {
+  "ember_big": [["ember_big_0", 6], ["ember_big_1", 6], ["ember_big_2", 6], ["ember_big_3", 6]],
+  "ember_mid": [["ember_mid_0", 5], ["ember_mid_1", 5], ["ember_mid_2", 5], ["ember_mid_3", 5]],
+  "ember_small": [["ember_small_0", 7], ["ember_small_1", 7], ["ember_small_2", 7], ["ember_small_3", 7]],
+  "spark": [["spark_0", 4], ["spark_1", 4], ["spark_2", 4], ["spark_3", 4]]
+ },
+ "note": "标题画面余烬粒子：每格 8×8，锚点(4,4)为粒子中心。建议运行时随机生成粒子，从画面下方/城堡处向上飘（每帧上移 0.2~0.6px，左右正弦摆动），循环播放对应 anim。"
+}

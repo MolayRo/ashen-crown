@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="description" content="灰烬王冠 —— GBA 点阵风格的中文回合制战棋游戏">
+<title>灰烬王冠</title>
+<link rel="icon" href="assets/icon.png">
+<style>
+  :root { --bg: #07060b; --fg: #d8c089; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+  canvas#screen { display: block; width: 100vw; height: 100vh; touch-action: none; outline: none; }
+  #boot { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center;
+          color: var(--fg); font: 15px/1.6 "Microsoft YaHei", "PingFang SC", sans-serif; letter-spacing: 2px; pointer-events: none; }
+  #boot small { color: #8a7a58; font-size: 12px; letter-spacing: 1px; }
+  #boot.err { color: #ff9a8a; }
+</style>
+</head>
+<body>
+<canvas id="screen" tabindex="0"></canvas>
+<div id="boot">载入中……<small>灰烬王冠</small></div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

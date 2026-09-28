@@ -1,0 +1,8 @@
+难度 hard 模式 classic  共 10 局  全通关 0
+ch1: 胜 9/10  平均回合 12.3  失败原因 {"lord":1}
+ch2: 胜 7/9  平均回合 19.3  失败原因 {"timeout":1,"lord":1}
+ch3: 胜 2/7  平均回合 16.0  失败原因 {"lord":3,"timeout":2}
+ch4: 胜 1/2  平均回合 9.0  失败原因 {"lord":1}
+ch5: 胜 0/1  平均回合 -  失败原因 {"lord":1}
+招募次数 {"elwin":10,"glenn":10,"nora":10,"serin":10,"doran":7,"mira":3,"vera":2}
+阵亡次数 {"serin":5,"doran":4,"nora":5,"mira":2,"vera":1}

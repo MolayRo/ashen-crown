@@ -1,0 +1,17 @@
+{
+  "name": "ashen-crown",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "灰烬王冠 —— GBA 点阵风格的中文回合制战棋游戏（浏览器运行）",
+  "scripts": {
+    "start": "python tools/devserver.py 5186",
+    "build": "node tools/build_single.mjs",
+    "test": "node tools/tests/validate.mjs && node tools/check_maps.mjs && node tools/story_stats.mjs",
+    "sim": "node tools/tests/sim.mjs normal 10 classic --retries=2",
+    "deploy": "bash deploy.sh"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>灰烬王冠 · 音频试听台</title>
+<style>
+  :root { --bg: #0b0a12; --panel: #15131f; --line: #2a2638; --fg: #e8dcc0; --dim: #8f8672; --gold: #d8c089; --blue: #7fb0ff; --red: #ff8a7a; --green: #8fd18a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: #0e0d17ee; border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+  h1 { font-size: 17px; margin: 0; color: var(--gold); letter-spacing: 2px; }
+  h2 { font-size: 15px; color: var(--gold); margin: 22px 0 8px; letter-spacing: 1px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 4px 16px 60px; }
+  button { background: #231f33; color: var(--fg); border: 1px solid #3b3552; border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--gold); }
+  button.on { background: #3a2f16; border-color: var(--gold); color: #fff3d0; }
+  .status { font-size: 12px; color: var(--dim); font-family: Consolas, monospace; }
+  .status b { color: var(--fg); font-weight: normal; }
+  .vols { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .vols label { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+  .vols input { width: 110px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .card.playing { border-color: var(--gold); box-shadow: 0 0 0 1px #d8c08944 inset; }
+  .card .t { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .card .n { font-size: 15px; color: #fff; }
+  .card .id { font-family: Consolas, monospace; color: var(--blue); font-size: 12px; }
+  .card .meta { color: var(--dim); font-size: 12px; margin: 2px 0 6px; }
+  .card .desc { font-size: 12px; color: #b9ae94; margin-bottom: 8px; }
+  .card .btns { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bar { position: relative; height: 8px; background: #221e30; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .bar .loop { position: absolute; top: 0; bottom: 0; background: #3b3150; }
+  .bar .pos { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--gold); }
+  .sfx { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .sfx button { text-align: left; padding: 6px 8px; }
+  .sfx button small { display: block; color: var(--dim); font-family: Consolas, monospace; font-size: 11px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+  .note { color: var(--dim); font-size: 12px; }
+  #meter { width: 100%; height: 60px; display: block; background: #110f19; border: 1px solid var(--line); border-radius: 6px; }
+  table { border-collapse: collapse; font-size: 12px; font-family: Consolas, monospace; }
+  td, th { border-bottom: 1px solid var(--line); padding: 2px 10px 2px 0; text-align: left; }
+  #log { max-height: 160px; overflow: auto; font-size: 12px; font-family: Consolas, monospace; color: var(--dim); background: #110f19; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>灰烬王冠 · 音频试听台</h1>
+  <button id="unlock">解锁音频</button>
+  <div class="vols">
+    <label>主音量 <input type="range" min="0" max="100" data-k="masterVol"><span></span></label>
+    <label>音乐 <input type="range" min="0" max="100" data-k="musicVol"><span></span></label>
+    <label>音效 <input type="range" min="0" max="100" data-k="sfxVol"><span></span></label>
+  </div>
+  <div class="status" id="status">未解锁</div>
+</header>
+<main>
+  <h2>输出电平</h2>
+  <canvas id="meter" width="1100" height="60"></canvas>
+
+  <h2>循环曲目 <span class="note">（“接缝测试”从循环终点前 4 秒开始播放，第 4 秒处就是跳回循环起点的位置；进度条深色段是循环区）</span></h2>
+  <div class="row">
+    <button id="stop">停止（淡出 1 秒）</button>
+    <button id="stop0">立即停止</button>
+    <button id="spam">同一首连续 playMusic 10 次</button>
+    <button id="preloadAll">预渲染全部曲目</button>
+    <span class="note" id="spamOut"></span>
+  </div>
+  <div class="grid" id="music"></div>
+
+  <h2>短曲（playJingle）</h2>
+  <div class="grid" id="jingles"></div>
+
+  <h2>音效</h2>
+  <div class="row">
+    <label>音量 vol <input type="range" id="svol" min="0" max="150" value="100"> <span id="svolV">1.00</span></label>
+    <label>速率 rate <input type="range" id="srate" min="50" max="200" value="100"> <span id="srateV">1.00</span></label>
+    <button id="burst">连打 20 次“命中”（测限流）</button>
+    <button id="burstText">对白逐字 60 字/秒 × 2 秒</button>
+  </div>
+  <div class="sfx" id="sfx"></div>
+
+  <h2>渲染记录</h2>
+  <table id="rlog"><thead><tr><th>资源</th><th>排队+渲染 ms</th><th>合成 ms</th></tr></thead><tbody></tbody></table>
+  <h2>日志</h2>
+  <div id="log"></div>
+</main>
+<script type="module">
+import { audio } from '../src/core/audio.js';
+import { MUSIC } from '../src/game/data/music.js';
+import { SFX } from '../src/game/data/sfx.js';
+import { songInfo } from '../src/core/synth.js';
+import { settings, loadSettings, setSetting } from '../src/core/settings.js';
+
+loadSettings();
+window.audio = audio;
+const $ = (s) => document.querySelector(s);
+const logEl = $('#log');
+const log = (m) => { logEl.textContent = `[${new Date().toLocaleTimeString()}] ${m}\n` + logEl.textContent; };
+const origWarn = console.warn;
+console.warn = (...a) => { log('警告 ' + a.join(' ')); origWarn(...a); };
+
+const SFX_NAMES = {
+  cursor: '菜单移动', confirm: '确认', cancel: '取消', select: '选中单位', error: '不可操作', text: '对白逐字', page: '翻页',
+  save: '存档', phase: '回合切换', warn: '增援警告', step: '步行', step_horse: '马蹄', wing: '扇翅', sword: '挥剑', lance: '枪刺',
+  axe: '挥斧', bow: '放箭', throw: '投掷', fire: '火焰魔法', thunder: '雷霆魔法', dark: '暗魔法', light: '光魔法', hit: '命中',
+  hit_heavy: '重击', miss: '未命中', crit: '必杀', nodmg: '无伤害', death: '阵亡/退场', heal: '治疗', levelup: '升级', statup: '加点',
+  recruit: '招募', chest: '开箱', door: '开门', item: '使用道具', gold: '获得金钱', visit: '访问村庄', burn: '村庄被烧',
+};
+
+// 音量滑块
+for (const inp of document.querySelectorAll('.vols input')) {
+  const k = inp.dataset.k, out = inp.nextElementSibling;
+  inp.value = settings[k]; out.textContent = settings[k];
+  inp.addEventListener('input', () => { setSetting(k, +inp.value); out.textContent = inp.value; audio.applyVolumes(); });
+}
+$('#unlock').onclick = () => { audio.unlock(); log('unlock()'); };
+
+// 曲目卡片
+const cards = new Map();
+const fmt = (s) => s.toFixed(1) + 's';
+function card(id, def, parent) {
+  const inf = songInfo(def);
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML = `<div class="t"><span class="n">${def.name}</span><span class="id">${id}</span></div>
+    <div class="meta">${def.key} · ♩=${def.bpm} · ${(def.meter || [4, 4]).join('/')} · ${def.loop ? `前奏 ${fmt(inf.introSec)} + 循环 ${fmt(inf.loopSec)}` : `时长 ${fmt(inf.duration)}`}</div>
+    <div class="desc">${def.desc || ''}</div><div class="btns"></div>${def.loop ? '<div class="bar"><div class="loop"></div><div class="pos"></div></div>' : ''}`;
+  const btns = el.querySelector('.btns');
+  const b = (label, fn) => { const x = document.createElement('button'); x.textContent = label; x.onclick = () => { audio.unlock(); fn(); }; btns.appendChild(x); };
+  if (def.loop) {
+    b('▶ 播放', () => { audio.playMusic(id); log(`playMusic('${id}')`); });
+    b('↻ 重头', () => { audio.playMusic(id, { restart: true, fade: 0.3 }); log(`playMusic('${id}', {restart:true})`); });
+    b('⤓ 接缝测试', async () => {
+      await audio.preload([id]);
+      const e = audio._bufs.get('m:' + id);
+      if (!e) { log('尚未渲染完成'); return; }
+      audio.playMusic(id, { restart: true, fade: 0.05, offset: e.loopEnd - 4 });
+      log(`接缝测试 ${id}：从 ${fmt(e.loopEnd - 4)} 开始，4 秒后跳回 ${fmt(e.loopStart)}`);
+    });
+  } else {
+    b('▶ 播放短曲', () => { const d = audio.playJingle(id); log(`playJingle('${id}') 返回 ${d.toFixed(2)} 秒`); });
+  }
+  parent.appendChild(el);
+  cards.set(id, el);
+}
+for (const [id, def] of Object.entries(MUSIC)) card(id, def, def.loop ? $('#music') : $('#jingles'));
+
+$('#stop').onclick = () => { audio.stopMusic(1.0); log('stopMusic(1.0)'); };
+$('#stop0').onclick = () => { audio.stopMusic(0); log('stopMusic(0)'); };
+$('#spam').onclick = () => {
+  audio.unlock();
+  const id = audio.musicId || 'title';
+  for (let i = 0; i < 10; i++) audio.playMusic(id);
+  setTimeout(() => {
+    const n = audio.status().voices.filter((v) => !v.fading).length;
+    $('#spamOut').textContent = `连续 10 次 playMusic('${id}') 后，正在播放的音乐实例数 = ${n}（应为 1；若仍在渲染则为 0）`;
+  }, 300);
+};
+$('#preloadAll').onclick = async () => {
+  const t0 = performance.now();
+  await audio.preload(Object.keys(MUSIC));
+  log(`全部曲目预渲染完成，用时 ${((performance.now() - t0) / 1000).toFixed(1)} 秒`);
+};
+
+// 音效
+const svol = $('#svol'), srate = $('#srate');
+const sv = () => +svol.value / 100, sr = () => +srate.value / 100;
+svol.oninput = () => { $('#svolV').textContent = sv().toFixed(2); };
+srate.oninput = () => { $('#srateV').textContent = sr().toFixed(2); };
+for (const id of Object.keys(SFX)) {
+  const x = document.createElement('button');
+  x.innerHTML = `${SFX_NAMES[id] || id}<small>${id}</small>`;
+  x.onclick = () => { audio.unlock(); audio.sfx(id, { vol: sv(), rate: sr() }); };
+  $('#sfx').appendChild(x);
+}
+$('#burst').onclick = () => {
+  audio.unlock();
+  let n = 0;
+  const iv = setInterval(() => { audio.sfx('hit'); if (++n >= 20) { clearInterval(iv); log(`连打 20 次 hit（间隔 10ms），同时发声 ${audio.status().sfxPlaying} 个（限流间隔 ${SFX.hit.gap}s、最多 ${SFX.hit.max ?? 3} 个）`); } }, 10);
+};
+$('#burstText').onclick = () => {
+  audio.unlock();
+  let n = 0;
+  const iv = setInterval(() => { audio.sfx('text', { vol: 0.35 }); if (++n >= 120) clearInterval(iv); }, 1000 / 60);
+};
+
+// 状态、进度条、电平
+const meter = $('#meter'), mctx = meter.getContext('2d');
+let data = null, peakHold = 0;
+function frame() {
+  const st = audio.status();
+  $('#status').innerHTML = `状态 <b>${st.state}</b> · 采样率 <b>${st.sampleRate || '-'}</b> · 渲染 <b>${st.worker}</b>${st.rendering ? ` · 正在渲染 <b>${st.rendering}</b>` : ''}${st.queue.length ? ` · 排队 ${st.queue.length}` : ''} · 当前曲目 <b>${st.musicId || '-'}</b> · 缓存 <b>${st.cachedMB} MB</b>`;
+  $('#unlock').classList.toggle('on', st.ready);
+  const pos = audio.musicPosition();
+  for (const [id, el] of cards) {
+    el.classList.toggle('playing', !!pos && pos.id === id);
+    const bar = el.querySelector('.bar');
+    if (!bar) continue;
+    const e = audio._bufs.get('m:' + id);
+    if (e) {
+      const L = e.buffer.duration;
+      bar.querySelector('.loop').style.cssText = `left:${e.loopStart / L * 100}%;width:${(e.loopEnd - e.loopStart) / L * 100}%`;
+      bar.querySelector('.pos').style.left = pos && pos.id === id ? `${pos.pos / L * 100}%` : '-4px';
+    }
+  }
+  const an = audio.analyser();
+  const W = meter.width, H = meter.height;
+  mctx.fillStyle = '#110f19'; mctx.fillRect(0, 0, W, H);
+  if (an) {
+    if (!data) data = new Float32Array(an.fftSize);
+    an.getFloatTimeDomainData(data);
+    let pk = 0;
+    mctx.strokeStyle = '#7fb0ff'; mctx.beginPath();
+    for (let i = 0; i < data.length; i++) {
+      pk = Math.max(pk, Math.abs(data[i]));
+      const x = i / data.length * (W - 140), y = H / 2 - data[i] * H / 2;
+      i ? mctx.lineTo(x, y) : mctx.moveTo(x, y);
+    }
+    mctx.stroke();
+    peakHold = Math.max(pk, peakHold * 0.97);
+    const db = 20 * Math.log10(Math.max(1e-6, peakHold));
+    mctx.fillStyle = db > -1 ? '#ff8a7a' : '#d8c089';
+    mctx.font = '13px Consolas, monospace';
+    mctx.fillText(`峰值 ${db.toFixed(1)} dBFS`, W - 130, H / 2 + 5);
+  }
+  const tb = $('#rlog tbody');
+  if (tb.childElementCount !== audio.renderLog.length) {
+    tb.innerHTML = audio.renderLog.slice().reverse().map((r) => `<tr><td>${r.key}</td><td>${r.ms}</td><td>${r.renderMs ?? ''}</td></tr>`).join('');
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+audio.preload(['title']);
+log('页面就绪：点击任意按钮即解锁音频。标题曲已开始预渲染。');
+</script>
+</body>
+</html>
