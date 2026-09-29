@@ -118,7 +118,7 @@ export class TitleScene {
       if (it && it.enabled === false) drawText(ctx, it.reason, W / 2, 176 - 12, '#c8b0a0', { align: 'center', shadow: '#000' });
     }
     ctx.globalAlpha = 0.55;
-    drawText(ctx, hasCleared() ? '★ 已通关' : 'v1.0', 4, H - 13, '#c8b890', { shadow: '#000' });
+    drawText(ctx, hasCleared() ? '★ 已通关' : 'v1.0.1', 4, H - 13, '#c8b890', { shadow: '#000' });
     drawText(ctx, '© 2026 原创作品', W - 4, H - 13, '#c8b890', { align: 'right', shadow: '#000' });
     ctx.globalAlpha = 1;
   }

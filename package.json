@@ -1,6 +1,6 @@
 {
   "name": "ashen-crown",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "灰烬王冠 —— GBA 点阵风格的中文回合制战棋游戏（浏览器运行）",
