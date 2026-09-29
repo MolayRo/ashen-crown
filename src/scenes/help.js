@@ -1,7 +1,7 @@
 // 操作说明与规则速查（分页）
 import { W, H } from '../core/renderer.js';
 import { fill, drawWindow, drawArrow } from '../core/gfx.js';
-import { drawText, wrapText } from '../core/font.js';
+import { drawText, wrapText, textWidth } from '../core/font.js';
 import { audio } from '../core/audio.js';
 
 const PAGES = [
@@ -14,16 +14,16 @@ const PAGES = [
     ['R', '显示 / 隐藏敌方全体威胁范围'],
     ['M 或 选择空地', '打开地图菜单（部队、目标、存档、结束回合）'],
     ['E', '结束回合（仍有单位可行动时会确认）'],
-    ['按住 Shift / Ctrl / F', '快进对白与动画'],
+    ['Shift / Ctrl / F', '按住时快进对白与动画'],
     ['L 或 滚轮向上', '剧情中回看之前的对白'],
     ['鼠标', '左键 = 确认，右键 = 取消，滚轮 = 翻动列表'],
     ['触摸', '轻点 = 确认，长按 = 取消'],
   ] },
   { title: '回合与行动', rows: [
-    ['我方回合', '每个单位可以移动一次并行动一次（攻击、杖、交谈、访问、开箱、开门、道具、交换、待机）。'],
-    ['撤销移动', '移动后、执行任何动作之前，按取消可退回原位重新选择。'],
+    ['我方回合', '每个单位移动一次、行动一次（攻击、用杖、交谈、交换、待机等）。'],
+    ['撤销移动', '移动后、行动之前按取消可退回原位；移动后交换过物品则不能撤销。'],
     ['敌方回合', '敌人按各自的行为行动：进攻、守点、固守、支援、烧村、抢宝箱。'],
-    ['增援', '增援出现前一回合会在出现位置显示红色“!”并有提示；增援出现的当回合不会立刻行动。'],
+    ['增援', '出现位置提前一回合标出红色“!”；刚出现的增援当回合不会行动。'],
     ['胜利 / 失败', '随时可在地图菜单“目标”中查看。艾尔文阵亡即失败。'],
   ] },
   { title: '战斗规则', rows: [
@@ -40,7 +40,8 @@ const PAGES = [
     ['丘陵', '防御 +1、回避 +10；移动消耗较大。'],
     ['山地', '防御 +2、回避 +30；只有步行（消耗 4）与飞行能进入。'],
     ['要塞', '防御 +2、回避 +20，每回合开始回复 20% HP。'],
-    ['王座 / 城门 / 祭坛', '较高的防御与回避，每回合回复少量 HP。'],
+    ['王座 / 城门', '防御 +3、回避 +20，每回合开始回复 10% HP。'],
+    ['祭坛', '防御 +1、回避 +10。'],
     ['河流 / 高山 / 悬崖', '只有飞行单位能通过。浅滩可以涉水，但回避 -10。'],
     ['雪原', '第四章：重甲与骑马在雪地中行动迟缓。'],
     ['门 / 宝箱 / 村庄', '门与宝箱需要钥匙或盗贼；在村庄入口“访问”可获得道具，敌人会烧毁村庄。'],
@@ -55,21 +56,48 @@ const PAGES = [
     ['推荐', '加点界面按“推荐”会按职业定位自动分配，可以确认前再修改。'],
   ] },
   { title: '难度与模式', rows: [
-    ['简单', '敌人较弱、部分敌人不出现，资源更充足。'],
+    ['简单', '敌人较弱、数量较少，资源更充足。'],
     ['普通', '标准体验。'],
-    ['困难', '敌人更强、更多，AI 更会集火，资源更少。'],
-    ['修改难度', '游戏中可在设置里修改，从下一章开始生效。'],
+    ['困难', '敌人更强更多、更会集火，资源更少。'],
+    ['修改难度', '可在设置里修改，从下一章开始生效。'],
     ['休闲模式', '伙伴倒下只会撤退，章节结束后归队。'],
     ['经典模式', '伙伴倒下即永久阵亡，剧情会随之变化。'],
-    ['存档', '3 个存档位，并在每章开战前自动存档。地图上也可以随时存档（我方回合）。'],
+    ['存档', '3 个存档位，每章开战前自动存档；我方回合也可在地图上随时存档。'],
   ] },
 ];
 
+const TOP = 30;          // 第一行的 y
+const BOTTOM = H - 20;   // 文字不能越过这里（下面是“翻页 / 返回”提示）
+
+// 排版：键名列宽按本页最宽的键名定；一页放不下就自动拆成几屏（标题后标 1/2、2/2）
+function layoutScreens() {
+  const screens = [];
+  for (const p of PAGES) {
+    const keyW = Math.min(120, Math.max(...p.rows.map((r) => textWidth(r[0]))) + 10);
+    const rows = p.rows.map(([k, v]) => {
+      const keyLines = textWidth(k) > keyW - 6 ? wrapText(k, keyW - 6) : [k];
+      const lines = wrapText(v, W - 40 - keyW);
+      return { keyLines, lines, h: Math.max(keyLines.length, lines.length, 1) * 12 + 2 };
+    });
+    const parts = [];
+    let cur = [];
+    let y = TOP;
+    for (const r of rows) {
+      if (cur.length && y + r.h - 2 > BOTTOM) { parts.push(cur); cur = []; y = TOP; }
+      cur.push(r);
+      y += r.h;
+    }
+    if (cur.length) parts.push(cur);
+    parts.forEach((rs, i) => screens.push({ title: parts.length > 1 ? `${p.title}（${i + 1}/${parts.length}）` : p.title, keyW, rows: rs }));
+  }
+  return screens;
+}
+
 export class HelpScene {
-  constructor() { this.overlay = true; this.page = 0; }
+  constructor() { this.overlay = true; this.page = 0; this.screens = layoutScreens(); }
   update(game) {
     const input = game.input;
-    const n = PAGES.length;
+    const n = this.screens.length;
     if (input.repeat('left') || input.repeat('up')) { this.page = (this.page - 1 + n) % n; audio.sfx('page'); }
     if (input.repeat('right') || input.repeat('down') || input.confirm()) { this.page = (this.page + 1) % n; audio.sfx('page'); }
     if (input.click()) {
@@ -84,18 +112,15 @@ export class HelpScene {
     fill(ctx, 0, 0, W, H, '#05040a');
     ctx.globalAlpha = 1;
     drawWindow(ctx, 6, 4, W - 12, H - 8, 'menu');
-    const p = PAGES[this.page];
-    drawText(ctx, `操作说明 · ${p.title}`, 16, 10, '#f8e0a0', { shadow: '#000' });
-    drawText(ctx, `${this.page + 1}/${PAGES.length}`, W - 16, 10, '#b8c0e0', { align: 'right', shadow: '#000' });
+    const sc = this.screens[this.page];
+    drawText(ctx, `操作说明 · ${sc.title}`, 16, 10, '#f8e0a0', { shadow: '#000' });
+    drawText(ctx, `${this.page + 1}/${this.screens.length}`, W - 16, 10, '#b8c0e0', { align: 'right', shadow: '#000' });
     fill(ctx, 14, 25, W - 28, 1, 'rgba(255,240,200,0.3)');
-    let y = 30;
-    const wide = p.rows.some((r) => r[1].length > 20);
-    const keyW = wide ? 74 : 110;
-    for (const [k, v] of p.rows) {
-      const lines = wrapText(v, W - 40 - keyW);
-      drawText(ctx, k, 18, y, '#f8d878', { shadow: '#000' });
-      lines.forEach((l, i) => drawText(ctx, l, 18 + keyW, y + i * 12, '#f0ece0', { shadow: '#000' }));
-      y += Math.max(1, lines.length) * 12 + 2;
+    let y = TOP;
+    for (const r of sc.rows) {
+      r.keyLines.forEach((l, i) => drawText(ctx, l, 18, y + i * 12, '#f8d878', { shadow: '#000' }));
+      r.lines.forEach((l, i) => drawText(ctx, l, 18 + sc.keyW, y + i * 12, '#f0ece0', { shadow: '#000' }));
+      y += r.h;
     }
     drawArrow(ctx, 12, H / 2, 'left');
     drawArrow(ctx, W - 12, H / 2, 'right');

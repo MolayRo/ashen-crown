@@ -64,7 +64,7 @@ export class MapScene {
     this.hpPanels = null;
     this.expBar = null;
     this.levelUp = null;
-    this.committed = false;
+    this.lockedAt = null;    // 当前单位本次行动中交换过物品的位置（见 moveLocked）
     this.autoplay = false;
     this.speedup = false;
   }
@@ -481,7 +481,7 @@ export class MapScene {
     this.endMoveAnim(u);
     yield* this.runQueue();
     this.sel = null;
-    this.committed = false;
+    this.lockedAt = null;
     if (s.outcome) { yield* this.finishSeq(); return; }
     if (!s.playerCanAct()) {
       yield* this.wait(10);
@@ -758,6 +758,7 @@ export class MapScene {
     if (input.cancel()) {
       audio.sfx('cancel');
       this.sel = null;
+      this.lockedAt = null;
       this.view.cursor = { x: u.x, y: u.y };
       this.toIdle();
       return;
@@ -812,13 +813,19 @@ export class MapScene {
     })());
   }
 
+  // 移动之后交换过物品，这次移动就定下来了，不能再撤销（以前这里会从新位置重新选择移动，
+  // “交换 → 取消 → 再移动”可以一回合走遍全图）。在原地、还没移动时交换则仍可移动。
+  moveLocked() {
+    const l = this.lockedAt;
+    return !!l && (l.x !== this.origin.x || l.y !== this.origin.y);
+  }
+
   undoMove() {
     const s = this.state;
     const u = this.sel;
-    if (!this.committed) {
-      s.setPos(u, this.origin.x, this.origin.y);
-      u.moved = 0;
-    }
+    if (this.moveLocked()) return;
+    s.setPos(u, this.origin.x, this.origin.y);
+    u.moved = 0;
     this.view.cursor = { x: u.x, y: u.y };
     this.selectUnit(u);
   }
@@ -851,6 +858,11 @@ export class MapScene {
   }
 
   updateAction(input) {
+    if (input.cancel() && this.moveLocked()) {
+      audio.sfx('error');
+      this.game.showToast('已经交换过物品，不能再撤销移动');
+      return;
+    }
     const r = this.menu.update(input);
     if (!r) return;
     if (r.type === 'cancel') { this.undoMove(); return; }
@@ -872,7 +884,6 @@ export class MapScene {
         this.game.push(new ItemMenuScene(u, {
           state: s, inBattle: true,
           onUse: (result) => { this.act('item', { result }); },
-          onChange: () => { this.committed = this.committed; },
         }));
         break;
       case 'supply':
@@ -997,7 +1008,7 @@ export class MapScene {
         case 'talk': this.act('talk', { target: tgt }); break;
         case 'door': this.act('door', { x: tgt.x, y: tgt.y }); break;
         case 'trade':
-          this.game.push(new TradeScene(u, tgt, { onClose: (changed) => { if (changed) this.committed = true; this.view.cursor = { x: u.x, y: u.y }; this.openActionMenu(); } }));
+          this.game.push(new TradeScene(u, tgt, { onClose: (changed) => { if (changed) this.lockedAt = { x: u.x, y: u.y }; this.view.cursor = { x: u.x, y: u.y }; this.openActionMenu(); } }));
           break;
         default: break;
       }
