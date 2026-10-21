@@ -83,4 +83,4 @@ node tools/build_single.mjs              # 生成单文件版
 
 ## 许可
 
-游戏中的图像、音乐、音效与文本均为本作原创。字体为 Fusion Pixel Font（SIL OFL 1.1），许可证见 `licenses/`，详细清单见 [docs/素材来源与许可.md](docs/素材来源与许可.md)。
+代码以及游戏中的原创图像、音乐、音效与文本以 [MIT 许可](LICENSE) 发布。字体不在此列，为 Fusion Pixel Font（SIL OFL 1.1），许可证见 `licenses/`，详细清单见 [docs/素材来源与许可.md](docs/素材来源与许可.md)。
